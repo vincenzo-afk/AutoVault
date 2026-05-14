@@ -5,12 +5,12 @@
 @tailwind utilities;
 
 :root {
-  --surface-bg: #0F1117;
-  --surface-card: #181C27;
-  --surface-border: #252A3A;
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-muted: #475569;
+  --surface-bg: #080B12;
+  --surface-card: #0E1320;
+  --surface-border: #1C2438;
+  --text-primary: #F0F4FF;
+  --text-secondary: #8A9BC4;
+  --text-muted: #3D4F6E;
 }
 
 /* Light mode overrides */
@@ -101,4 +101,35 @@ body {
   border: 1px solid #252A3A !important;
   border-radius: 8px !important;
   color: #F1F5F9 !important;
+}
+
+/* Racing stripe accent */
+.racing-stripe {
+  background: linear-gradient(90deg, #FF3B3B 0%, #FF6B35 25%, #FFD700 50%, #00E5FF 75%, #7B2FFF 100%);
+  height: 3px;
+  width: 100%;
+}
+
+/* Neon glow text */
+.neon-blue { text-shadow: 0 0 20px rgba(0, 229, 255, 0.8), 0 0 40px rgba(0, 229, 255, 0.4); }
+.neon-red  { text-shadow: 0 0 20px rgba(255, 59, 59, 0.8),  0 0 40px rgba(255, 59, 59, 0.4); }
+
+/* Holographic card shimmer */
+.card-shimmer {
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.01) 50%,
+    rgba(255,255,255,0.04) 100%
+  );
+}
+
+/* Speed line texture */
+.speed-lines {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 2px,
+    rgba(255,255,255,0.01) 2px,
+    rgba(255,255,255,0.01) 4px
+  );
 }

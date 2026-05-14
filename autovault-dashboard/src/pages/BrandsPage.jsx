@@ -1,80 +1,97 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Car } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Car, Search as SearchIcon } from 'lucide-react';
+import useAutoStore from '../store/useAutoStore';
 import Navbar from '../components/Navbar';
 import BrandCard from '../components/BrandCard';
 import EmptyState from '../components/EmptyState';
-import useAutoStore from '../store/useAutoStore';
 
 export default function BrandsPage() {
   const navigate = useNavigate();
+  const { brands, models, getBrandColor, getImage, setSelectedBrand } = useAutoStore();
   const [search, setSearch] = useState('');
 
-  const brands         = useAutoStore((s) => s.brands);
-  const models         = useAutoStore((s) => s.models);
-  const getBrandColor  = useAutoStore((s) => s.getBrandColor);
-  const getImage       = useAutoStore((s) => s.getImage);
-  const setSelectedBrand = useAutoStore((s) => s.setSelectedBrand);
+  const filteredBrands = useMemo(() => {
+    if (!search.trim()) return brands;
+    const q = search.toLowerCase();
+    return brands.filter(
+      (b) =>
+        b.brand_name?.toLowerCase().includes(q) ||
+        b.country?.toLowerCase().includes(q)
+    );
+  }, [brands, search]);
 
-  const filteredBrands = brands.filter((b) =>
-    b.brand_name.toLowerCase().includes(search.toLowerCase()) ||
-    b.country.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const handleBrandClick = (brand_id) => {
-    setSelectedBrand(brand_id);
-    navigate(`/brands/${brand_id}/models`);
+  const handleBrandClick = (brand) => {
+    setSelectedBrand(brand.brand_id);
+    navigate(`/brands/${brand.brand_id}/models`);
   };
 
   return (
-    <div className="min-h-screen bg-surface-bg bg-grid-texture">
+    <div className="min-h-screen bg-surface-bg">
       <Navbar showSearch searchValue={search} onSearchChange={setSearch} />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Hero Section */}
+        {/* Hero Section */}
+        <div className="mb-12 relative">
+          {/* Racing stripe across top */}
+          <div className="racing-stripe mb-6" />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        {/* Hero */}
-        <div className="mb-10">
-          <h1 className="font-display text-5xl sm:text-7xl tracking-widest text-slate-100 uppercase">
-            Select a Brand
+          {/* Main heading */}
+          <h1 className="font-display text-6xl sm:text-8xl tracking-widest text-white uppercase leading-none">
+            Auto<span style={{ color: '#00E5FF' }} className="neon-blue">Vault</span>
           </h1>
-          <div className="h-1 bg-gradient-to-r from-blue-500 to-violet-500 rounded-full mt-2 animate-underline-grow" />
-          <p className="text-slate-500 font-body text-sm mt-3">
-            {brands.length} brand{brands.length !== 1 ? 's' : ''} loaded
+
+          {/* Tagline */}
+          <p className="font-body text-slate-400 text-base mt-3 tracking-wide">
+            {brands.length} Brands · {models.length} Models · {useAutoStore.getState().parts.length || 0} Parts
           </p>
+
+          {/* Decorative speed lines */}
+          <div className="absolute inset-0 speed-lines pointer-events-none opacity-40" />
         </div>
 
-        {/* Empty state — no data */}
+        {/* Empty State: No Data */}
         {brands.length === 0 && (
           <EmptyState
-            icon={<Car size={56} strokeWidth={1} />}
-            title="No Data Loaded"
-            description="Upload an Excel file in the Admin Panel to get started."
-            action={{ label: 'Go to Admin Panel', onClick: () => navigate('/admin') }}
+            icon={Car}
+            title="No Brands Loaded"
+            description="Upload an Excel file with brand data in the Admin Panel to get started."
+            action={{
+              label: 'Go to Admin Panel',
+              onClick: () => navigate('/admin'),
+            }}
           />
         )}
 
-        {/* Empty state — no search results */}
+        {/* Empty State: No Search Results */}
         {brands.length > 0 && filteredBrands.length === 0 && (
           <EmptyState
-            title="No brands match your search"
-            description={`No results for "${search}". Try a different term.`}
-            action={{ label: 'Clear Search', onClick: () => setSearch('') }}
+            icon={SearchIcon}
+            title="No Matching Brands"
+            description={`No brands match "${search}". Try a different search term.`}
           />
         )}
 
-        {/* Brand grid */}
+        {/* Brands Grid */}
         {filteredBrands.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredBrands.map((brand, i) => (
-              <BrandCard
-                key={brand.brand_id}
-                brand={brand}
-                modelCount={models.filter((m) => m.brand_id === brand.brand_id).length}
-                logoSrc={getImage(brand.logo_filename)}
-                colorConfig={getBrandColor(brand.brand_id)}
-                onClick={() => handleBrandClick(brand.brand_id)}
-                index={i}
-              />
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredBrands.map((brand, i) => {
+              const colorConfig = getBrandColor(brand.brand_id);
+              const logoSrc = getImage(brand.logo_filename);
+              const modelCount = models.filter((m) => m.brand_id === brand.brand_id).length;
+              return (
+                <BrandCard
+                  key={brand.brand_id}
+                  brand={brand}
+                  modelCount={modelCount}
+                  logoSrc={logoSrc}
+                  colorConfig={colorConfig}
+                  onClick={() => handleBrandClick(brand)}
+                  index={i}
+                />
+              );
+            })}
           </div>
         )}
       </main>

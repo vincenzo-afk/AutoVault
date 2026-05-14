@@ -1,115 +1,195 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Settings2 } from 'lucide-react';
+import useAutoStore from '../store/useAutoStore';
 import Navbar from '../components/Navbar';
 import Breadcrumb from '../components/Breadcrumb';
 import FilterTabs from '../components/FilterTabs';
 import ModelCard from '../components/ModelCard';
 import EmptyState from '../components/EmptyState';
-import useAutoStore from '../store/useAutoStore';
 
 export default function ModelsPage() {
   const { brandId } = useParams();
-  const navigate    = useNavigate();
+  const navigate = useNavigate();
+  const {
+    getBrandById,
+    getModelsForBrand,
+    getBrandColor,
+    getImage,
+    setSelectedBrand,
+  } = useAutoStore();
 
-  const getBrandById   = useAutoStore((s) => s.getBrandById);
-  const getModelsForBrand = useAutoStore((s) => s.getModelsForBrand);
-  const getBrandColor  = useAutoStore((s) => s.getBrandColor);
-  const getImage       = useAutoStore((s) => s.getImage);
-  const setSelectedBrand = useAutoStore((s) => s.setSelectedBrand);
-  const setSelectedModel = useAutoStore((s) => s.setSelectedModel);
+  const brand = getBrandById(brandId);
+  const brandColor = getBrandColor(brandId);
+  const brandModels = getModelsForBrand(brandId);
 
-  const brand  = getBrandById(brandId);
-  const models = getModelsForBrand(brandId);
-  const colorConfig = getBrandColor(brandId);
-
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [activeFuel, setActiveFuel]         = useState('all');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeFuel, setActiveFuel] = useState('All');
 
   useEffect(() => {
-    if (!brand) { navigate('/brands'); return; }
+    if (!brand) {
+      navigate('/brands', { replace: true });
+      return;
+    }
     setSelectedBrand(brandId);
-  }, [brandId]);
+  }, [brand, brandId, navigate, setSelectedBrand]);
 
   const categories = useMemo(() => {
-    const cats = [...new Set(models.map((m) => m.category))];
-    return [{ label: 'All', value: 'all', count: models.length },
-      ...cats.map((c) => ({ label: c, value: c, count: models.filter((m) => m.category === c).length }))];
-  }, [models]);
+    const counts = {};
+    brandModels.forEach((m) => {
+      counts[m.category] = (counts[m.category] || 0) + 1;
+    });
+    return [
+      { key: 'All', label: 'All', count: brandModels.length },
+      ...Object.entries(counts).map(([key, count]) => ({ key, label: key, count })),
+    ];
+  }, [brandModels]);
 
-  const fuels = useMemo(() => ['all', ...[...new Set(models.map((m) => m.fuel_type))]], [models]);
+  const fuels = useMemo(() => {
+    const set = new Set(brandModels.map((m) => m.fuel_type).filter(Boolean));
+    return ['All', ...Array.from(set)];
+  }, [brandModels]);
 
-  const filteredModels = useMemo(() => models.filter((m) => {
-    if (activeCategory !== 'all' && m.category !== activeCategory) return false;
-    if (activeFuel !== 'all' && m.fuel_type !== activeFuel)       return false;
-    return true;
-  }), [models, activeCategory, activeFuel]);
+  const filteredModels = useMemo(() => {
+    let result = brandModels;
+    if (activeCategory !== 'All') {
+      result = result.filter((m) => m.category === activeCategory);
+    }
+    if (activeFuel !== 'All') {
+      result = result.filter((m) => m.fuel_type === activeFuel);
+    }
+    return result;
+  }, [brandModels, activeCategory, activeFuel]);
+
+  const logoSrc = brand ? getImage(brand.logo_filename) : null;
 
   if (!brand) return null;
 
   return (
-    <div className="min-h-screen bg-surface-bg bg-grid-texture">
+    <div className="min-h-screen bg-surface-bg">
       <Navbar />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb
+          crumbs={[
+            { label: brand.brand_name, href: null },
+            { label: 'Models' },
+          ]}
+        />
 
-      {/* Brand banner */}
-      <div className={`w-full bg-gradient-to-r ${colorConfig.gradient} relative overflow-hidden`}>
-        <div className="absolute inset-0 bg-grid-texture opacity-20" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 flex items-center gap-6">
-          <div className="w-20 h-20 rounded-full bg-white/95 flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden">
-            {getImage(brand.logo_filename) ? (
-              <img src={getImage(brand.logo_filename)} alt={brand.brand_name} className="w-14 h-14 object-contain" />
-            ) : (
-              <span className="text-2xl font-display text-slate-800">{brand.brand_name.charAt(0)}</span>
-            )}
-          </div>
-          <div>
-            <h1 className="font-display text-4xl sm:text-5xl tracking-widest text-white uppercase">{brand.brand_name}</h1>
-            <p className="text-white/70 font-body text-sm mt-1 max-w-xl">{brand.description}</p>
-            <p className="text-white/50 font-body text-xs mt-1">{brand.country} · Est. {brand.founded_year}</p>
-          </div>
-        </div>
-      </div>
+        {/* Brand Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl p-6 sm:p-8"
+          style={{
+            background: `linear-gradient(135deg, ${brandColor.secondary || brandColor.primary}44, ${brandColor.primary}88, #080B12)`,
+          }}
+        >
+          <div className="flex items-center gap-6 relative z-10">
+            {/* Logo */}
+            <div className="flex-shrink-0">
+              {logoSrc ? (
+                <div 
+                  className="w-24 h-24 rounded-full bg-white flex items-center justify-center p-3"
+                  style={{ boxShadow: `0 0 20px ${brandColor.primary}88` }}
+                >
+                  <img
+                    src={logoSrc}
+                    alt={brand.brand_name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div
+                  className="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold bg-white"
+                  style={{
+                    color: brandColor.primary,
+                    boxShadow: `0 0 20px ${brandColor.primary}88`
+                  }}
+                >
+                  {brand.brand_name?.charAt(0) || '?'}
+                </div>
+              )}
+            </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <Breadcrumb crumbs={[{ label: brand.brand_name }]} />
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <h1
+                className="font-display text-5xl sm:text-7xl uppercase tracking-widest text-white leading-none"
+              >
+                {brand.brand_name}
+              </h1>
+              <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-300">
+                {brand.country && <span>📍 {brand.country}</span>}
+                {brand.founded_year && <span>📅 Founded {brand.founded_year}</span>}
+                <span>🚗 {brandModels.length} Model{brandModels.length !== 1 ? 's' : ''}</span>
+              </div>
+              {brand.description && (
+                <p className="text-sm text-slate-400 mt-2 max-w-2xl">{brand.description}</p>
+              )}
+            </div>
+          </div>
+          
+          {/* Bottom racing stripe */}
+          <div className="racing-stripe absolute bottom-0 left-0" />
+        </motion.div>
 
         {/* Filters */}
-        <div className="mt-6 flex flex-wrap items-center gap-4">
-          <FilterTabs tabs={categories} active={activeCategory} onSelect={setActiveCategory} />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <FilterTabs
+            tabs={categories}
+            active={activeCategory}
+            onSelect={setActiveCategory}
+            colorMap={{}}
+            className="flex-1"
+          />
           <select
             value={activeFuel}
             onChange={(e) => setActiveFuel(e.target.value)}
-            className="px-3 py-2 text-sm font-body bg-surface-card border border-surface-border rounded-xl text-slate-300 focus:outline-none focus:border-blue-500/60 cursor-pointer"
+            className="px-3 py-1.5 rounded-lg bg-surface-card border border-surface-border text-sm text-slate-300 focus:outline-none focus:border-blue-500/50"
           >
-            {fuels.map((f) => <option key={f} value={f}>{f === 'all' ? 'All Fuel Types' : f}</option>)}
+            {fuels.map((fuel) => (
+              <option key={fuel} value={fuel}>
+                {fuel === 'All' ? 'All Fuel Types' : fuel}
+              </option>
+            ))}
           </select>
         </div>
 
         {/* Count */}
-        <p className="text-slate-500 text-sm font-body mt-4 mb-6">
-          Showing {filteredModels.length} of {models.length} model{models.length !== 1 ? 's' : ''}
+        <p className="text-sm text-slate-500">
+          Showing {filteredModels.length} of {brandModels.length} models
         </p>
 
-        {/* Grid */}
-        {filteredModels.length === 0 ? (
+        {/* Empty State */}
+        {filteredModels.length === 0 && (
           <EmptyState
-            title="No models match the filters"
-            description="Try removing a filter to see more results."
+            icon={Settings2}
+            title="No Models Found"
+            description="No models match the selected filters. Try adjusting your criteria."
           />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredModels.map((model, i) => (
-              <ModelCard
-                key={model.model_id}
-                model={model}
-                imageSrc={getImage(model.image_filename)}
-                brandColor={colorConfig.primary}
-                onClick={() => {
-                  setSelectedModel(model.model_id);
-                  navigate(`/brands/${brandId}/models/${model.model_id}/parts`);
-                }}
-                index={i}
-              />
-            ))}
+        )}
+
+        {/* Models Grid */}
+        {filteredModels.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredModels.map((model, i) => {
+              const imageSrc = getImage(model.image_filename);
+              return (
+                <ModelCard
+                  key={model.model_id}
+                  model={model}
+                  imageSrc={imageSrc}
+                  brandColor={brandColor}
+                  onClick={() =>
+                    navigate(`/brands/${brandId}/models/${model.model_id}/parts`)
+                  }
+                  index={i}
+                />
+              );
+            })}
           </div>
         )}
       </main>

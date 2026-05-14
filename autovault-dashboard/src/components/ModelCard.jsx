@@ -3,80 +3,90 @@ import { motion } from 'framer-motion';
 import { Fuel, Settings2, Users, Zap } from 'lucide-react';
 import { MODEL_CATEGORY_COLORS } from '../utils/constants';
 
-const FUEL_ICONS = { Petrol: '⛽', Diesel: '🛢️', Electric: '⚡', Hybrid: '🔋' };
+const FUEL_ICONS = {
+  Petrol: { icon: Zap, color: 'text-amber-400' },
+  Diesel: { icon: Fuel, color: 'text-slate-400' },
+  Electric: { icon: Zap, color: 'text-emerald-400' },
+  Hybrid: { icon: Settings2, color: 'text-cyan-400' },
+};
 
-export default function ModelCard({ model, imageSrc, brandColor, onClick, index }) {
-  const categoryClass = MODEL_CATEGORY_COLORS[model.category] || 'bg-slate-500/20 text-slate-300 border border-slate-500/40';
+export default function ModelCard({ model, imageSrc, brandColor, onClick, index = 0 }) {
+  const categoryStyle = MODEL_CATEGORY_COLORS[model.category] || MODEL_CATEGORY_COLORS.SUV;
+  const FuelIcon = FUEL_ICONS[model.fuel_type]?.icon || Fuel;
+  const fuelColor = FUEL_ICONS[model.fuel_type]?.color || 'text-slate-400';
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06, duration: 0.4, ease: 'easeOut' }}
-      whileHover={{ y: -6 }}
+      transition={{ duration: 0.35, delay: index * 0.04 }}
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onClick?.();
+      }}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      className="glass-card rounded-2xl overflow-hidden cursor-pointer group"
+      className="relative overflow-hidden rounded-2xl bg-surface-card border border-surface-border cursor-pointer group shadow-card hover:shadow-card-hover transition-all duration-300"
     >
-      {/* Car image */}
-      <div className="relative h-48 bg-surface-border overflow-hidden">
+      {/* Image Section */}
+      <div className="relative h-40 bg-gradient-to-br from-surface to-surface-hover overflow-hidden">
         {imageSrc ? (
-          <img
-            src={imageSrc}
-            alt={model.model_name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
+          <img src={imageSrc} alt={model.model_name} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-6xl opacity-30">🚗</span>
+          <div className="w-full h-full flex items-center justify-center bg-surface-card rounded-xl">
+            <span className="text-slate-600 text-xs font-body">No Image</span>
           </div>
         )}
-        {/* Category badge overlay */}
+        {/* Category badge */}
         <div className="absolute top-3 left-3">
-          <span className={`text-xs font-body font-semibold px-2.5 py-1 rounded-lg ${categoryClass}`}>
+          <span
+            className={`text-xs font-medium px-2.5 py-1 rounded-full ${categoryStyle.bg} ${categoryStyle.text} ${categoryStyle.border} border`}
+          >
             {model.category}
           </span>
         </div>
-        {/* Year badge overlay */}
+        {/* Year badge */}
         <div className="absolute top-3 right-3">
-          <span className="text-xs font-body font-medium px-2.5 py-1 rounded-lg bg-black/60 text-white/90 border border-white/10">
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-neon-gold/20 text-yellow-300 border border-yellow-400/40 backdrop-blur-sm">
             {model.year}
           </span>
         </div>
       </div>
 
-      {/* Info */}
-      <div className="p-5 space-y-3">
-        <h3 className="font-display text-xl tracking-wide text-slate-100">{model.model_name}</h3>
+      {/* Info Section */}
+      <div className="p-4">
+        <h3 className="text-base font-semibold text-slate-100 mb-3 truncate">
+          {model.model_name}
+        </h3>
 
-        <div className="grid grid-cols-2 gap-2 text-xs font-body text-slate-400">
-          <div className="flex items-center gap-1.5">
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400">
             <Settings2 size={12} className="text-slate-500" />
-            <span className="truncate">{model.engine_type}</span>
+            {model.engine_type}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Fuel size={12} className="text-slate-500" />
-            <span>{FUEL_ICONS[model.fuel_type] || ''} {model.fuel_type}</span>
+          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+            <FuelIcon size={12} className={fuelColor} />
+            {model.fuel_type}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Zap size={12} className="text-slate-500" />
-            <span>{model.horsepower} HP</span>
+          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Zap size={12} className="text-blue-400" />
+            {model.horsepower} hp
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400">
             <Users size={12} className="text-slate-500" />
-            <span>{model.seating_capacity} seats</span>
+            {model.seating_capacity} seats
           </div>
         </div>
 
-        {/* Price */}
-        <div
-          className="text-sm font-body font-semibold pt-1 border-t border-surface-border"
-          style={{ color: brandColor }}
-        >
-          {model.price_range}
-        </div>
+        {model.price_range && (
+          <p
+            className="text-sm font-semibold"
+            style={{ color: brandColor?.primary || '#3B82F6' }}
+          >
+            {model.price_range}
+          </p>
+        )}
       </div>
     </motion.div>
   );

@@ -1,68 +1,82 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { processImageFiles, processZipFile, estimateImagesSize, formatBytes } from '../utils/imageHandler';
 import useAutoStore from '../store/useAutoStore';
 
-const MAX_IMAGES_BYTES = 4.5 * 1024 * 1024; // 4.5MB safety limit
+const MAX_IMAGES_BYTES = 4.5 * 1024 * 1024; // 4.5MB soft limit
 
-export function useImageUpload() {
+export default function useImageUpload() {
   const [uploadedImages, setUploadedImages] = useState({});
-  const [isLoading, setIsLoading]           = useState(false);
-  const [error, setError]                   = useState(null);
-  const [warning, setWarning]               = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [warning, setWarning] = useState(null);
+  const { images: storedImages, mergeImages } = useAutoStore();
 
-  const mergeImages  = useAutoStore((s) => s.mergeImages);
-  const storeImages  = useAutoStore((s) => s.images);
+  const totalSize = useMemo(() => {
+    return formatBytes(estimateImagesSize(uploadedImages));
+  }, [uploadedImages]);
 
-  const checkSizeWarning = (map) => {
-    const size = estimateImagesSize({ ...storeImages, ...map });
-    if (size > MAX_IMAGES_BYTES) {
-      setWarning(`Total image storage is ${formatBytes(size * 1.33)}, which may exceed localStorage limits. Consider clearing old data first.`);
-    } else {
-      setWarning(null);
-    }
-  };
-
-  const handleFiles = useCallback(async (files) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await processImageFiles(Array.from(files));
-      setUploadedImages((prev) => {
-        const merged = { ...prev, ...result };
-        checkSizeWarning(merged);
-        return merged;
-      });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [storeImages]);
-
-  const handleZip = useCallback(async (file) => {
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-      setError('Only .zip files are accepted here.');
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await processZipFile(file);
-      if (Object.keys(result).length === 0) {
-        setError('No valid images found inside the ZIP file.');
+  const checkSizeWarning = useCallback(
+    (newMap) => {
+      const allImages = { ...storedImages, ...newMap };
+      const totalBytes = estimateImagesSize(allImages);
+      if (totalBytes > MAX_IMAGES_BYTES) {
+        setWarning(
+          `Total image size exceeds 4.5MB (currently ${formatBytes(totalBytes)}). Consider using smaller images to avoid localStorage quota issues.`
+        );
       } else {
+        setWarning(null);
+      }
+    },
+    [storedImages]
+  );
+
+  const handleFiles = useCallback(
+    async (files) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const newImages = await processImageFiles(files);
         setUploadedImages((prev) => {
-          const merged = { ...prev, ...result };
+          const merged = { ...prev, ...newImages };
           checkSizeWarning(merged);
           return merged;
         });
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError(`ZIP extraction failed: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [storeImages]);
+    },
+    [checkSizeWarning]
+  );
+
+  const handleZip = useCallback(
+    async (file) => {
+      if (!file.name.match(/\.zip$/i)) {
+        setError('Please upload a valid .zip file');
+        return;
+      }
+      setIsLoading(true);
+      setError(null);
+      try {
+        const extracted = await processZipFile(file);
+        if (Object.keys(extracted).length === 0) {
+          setError('No valid image files found in the ZIP archive');
+        } else {
+          setUploadedImages((prev) => {
+            const merged = { ...prev, ...extracted };
+            checkSizeWarning(merged);
+            return merged;
+          });
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [checkSizeWarning]
+  );
 
   const removeImage = useCallback((filename) => {
     setUploadedImages((prev) => {
@@ -73,7 +87,9 @@ export function useImageUpload() {
   }, []);
 
   const confirmSave = useCallback(() => {
+    if (Object.keys(uploadedImages).length === 0) return;
     mergeImages(uploadedImages);
+    setUploadedImages({});
   }, [uploadedImages, mergeImages]);
 
   const reset = useCallback(() => {
@@ -82,8 +98,6 @@ export function useImageUpload() {
     setError(null);
     setWarning(null);
   }, []);
-
-  const totalSize = formatBytes(estimateImagesSize(uploadedImages) * 1.33);
 
   return {
     uploadedImages,

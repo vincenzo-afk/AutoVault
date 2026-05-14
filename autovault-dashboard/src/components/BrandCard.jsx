@@ -3,68 +3,97 @@ import { motion } from 'framer-motion';
 import { Calendar, ChevronRight } from 'lucide-react';
 import { COUNTRY_FLAGS } from '../utils/constants';
 
-export default function BrandCard({ brand, modelCount, logoSrc, colorConfig, onClick, index }) {
+export default function BrandCard({ brand, modelCount, logoSrc, colorConfig, onClick, index = 0 }) {
+  const colors = colorConfig || {
+    primary: '#3B82F6',
+    gradient: 'from-blue-500 to-blue-700',
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.4, ease: 'easeOut' }}
-      whileHover={{ scale: 1.03, y: -4 }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+      whileHover={{ scale: 1.04, boxShadow: `0 0 25px ${colors.primary}55`, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onClick?.();
+      }}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      className="cursor-pointer group relative overflow-hidden rounded-2xl"
+      className="relative overflow-hidden rounded-2xl bg-surface-card border cursor-pointer group transition-all duration-300"
       style={{
-        boxShadow: `0 4px 24px rgba(0,0,0,0.4)`,
+        background: `linear-gradient(135deg, ${colors.secondary || colors.primary}33 0%, ${colors.primary}22 100%)`,
+        borderColor: `${colors.primary}66`
       }}
     >
-      {/* Gradient background */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${colorConfig.gradient} opacity-90`} />
+      {/* Top racing stripe */}
+      <div className="racing-stripe absolute top-0 left-0" />
 
-      {/* Subtle grid overlay */}
-      <div className="absolute inset-0 bg-grid-texture opacity-30" />
+      {/* Grid texture overlay */}
+      <div className="absolute inset-0 bg-grid-texture opacity-30 pointer-events-none" />
+
+      {/* Hover background shift */}
+      <div 
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+        style={{ backgroundColor: `${colors.primary}18` }}
+      />
 
       {/* Content */}
-      <div className="relative z-10 p-6 flex flex-col items-center text-center gap-4">
-        {/* Logo circle */}
-        <div className="w-20 h-20 rounded-full bg-white/95 flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
-          {logoSrc ? (
-            <img src={logoSrc} alt={`${brand.brand_name} logo`} className="w-14 h-14 object-contain" />
-          ) : (
-            <span className="text-2xl font-display text-slate-800">{brand.brand_name.charAt(0)}</span>
-          )}
+      <div className="relative p-5 flex flex-col h-full pt-6">
+        {/* Logo / Initial */}
+        <div className="mb-4">
+          <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center overflow-hidden shadow-md mx-auto relative z-10">
+            {logoSrc ? (
+              <img
+                src={logoSrc}
+                alt={brand.brand_name}
+                className="w-16 h-16 object-contain"
+              />
+            ) : (
+              <span className="text-slate-600 text-xs font-body">No Image</span>
+            )}
+          </div>
         </div>
 
         {/* Brand name */}
-        <h3 className="text-white font-display text-2xl tracking-widest uppercase leading-tight">
+        <h3
+          className="text-3xl font-display tracking-widest uppercase text-center mb-3"
+          style={{ color: colors.primary }}
+        >
           {brand.brand_name}
         </h3>
 
-        {/* Meta row */}
-        <div className="flex flex-col items-center gap-1.5">
-          <div className="flex items-center gap-1.5 text-white/80 text-sm font-body">
-            <span>{COUNTRY_FLAGS[brand.country] || '🌐'}</span>
-            <span>{brand.country}</span>
-          </div>
-          <div className="flex items-center gap-1 text-white/70 text-xs font-body">
-            <Calendar size={11} />
-            <span>Est. {brand.founded_year}</span>
-          </div>
+        {/* Meta info */}
+        <div className="flex justify-center items-center gap-3 mt-auto mb-4">
+          {brand.country && (
+            <p className="text-xs text-slate-400 flex items-center gap-1 font-body">
+              <span>{COUNTRY_FLAGS[brand.country] || '🏳️'}</span>
+              {brand.country}
+            </p>
+          )}
+          {brand.founded_year && (
+            <p className="text-xs text-slate-400 flex items-center gap-1 font-body">
+              <Calendar size={13} className="text-slate-500" />
+              {brand.founded_year}
+            </p>
+          )}
         </div>
 
-        {/* Models count pill */}
-        <div className="mt-auto px-4 py-1.5 rounded-full bg-white/20 border border-white/30 text-white text-sm font-body font-medium flex items-center gap-2">
-          <span>{modelCount === 0 ? 'No models yet' : `${modelCount} Model${modelCount !== 1 ? 's' : ''}`}</span>
-          {modelCount > 0 && <ChevronRight size={14} />}
+        {/* Model count pill */}
+        <div className="flex justify-center">
+          <span
+            className="text-xs font-medium px-4 py-1.5 rounded-full"
+            style={{
+              backgroundColor: `${colors.primary}33`,
+              color: colors.primary,
+            }}
+          >
+            {modelCount} Model{modelCount !== 1 ? 's' : ''}
+          </span>
         </div>
       </div>
-
-      {/* Glow on hover */}
-      <div
-        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-        style={{ boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.15), 0 0 32px ${colorConfig.primary}55` }}
-      />
     </motion.div>
   );
 }

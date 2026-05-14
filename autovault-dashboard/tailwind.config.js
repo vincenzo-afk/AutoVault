@@ -25,6 +25,13 @@ export default {
           amber: "#F59E0B",
           violet: "#8B5CF6",
         },
+        neon: {
+          blue: '#00E5FF',
+          red: '#FF3B3B',
+          gold: '#FFD700',
+          green: '#00FF88',
+          orange: '#FF6B35',
+        },
       },
       backgroundImage: {
         "grid-dark": "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
@@ -38,6 +45,10 @@ export default {
         "glow-green": "0 0 20px rgba(16,185,129,0.35)",
         "card": "0 4px 24px rgba(0,0,0,0.4)",
         "card-hover": "0 8px 40px rgba(0,0,0,0.6)",
+        'neon-blue':   '0 0 15px rgba(0,229,255,0.5), 0 0 30px rgba(0,229,255,0.2)',
+        'neon-red':    '0 0 15px rgba(255,59,59,0.5),  0 0 30px rgba(255,59,59,0.2)',
+        'neon-gold':   '0 0 15px rgba(255,215,0,0.5),  0 0 30px rgba(255,215,0,0.2)',
+        'neon-green':  '0 0 15px rgba(0,255,136,0.5),  0 0 30px rgba(0,255,136,0.2)',
       },
       animation: {
         "underline-grow": "underlineGrow 0.6s ease forwards",

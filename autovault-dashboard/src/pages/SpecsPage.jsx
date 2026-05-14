@@ -1,39 +1,43 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Printer } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Download, Printer, Package } from 'lucide-react';
+import useAutoStore from '../store/useAutoStore';
 import Navbar from '../components/Navbar';
 import Breadcrumb from '../components/Breadcrumb';
 import SpecTable from '../components/SpecTable';
 import SpecChart from '../components/SpecChart';
 import StockBadge from '../components/StockBadge';
 import EmptyState from '../components/EmptyState';
-import useAutoStore from '../store/useAutoStore';
 import { exportSpecsToExcel } from '../utils/exportHelper';
 
 export default function SpecsPage() {
   const { brandId, modelId, partId } = useParams();
   const navigate = useNavigate();
-  const printRef = useRef(null);
-
-  const getBrandById   = useAutoStore((s) => s.getBrandById);
-  const getModelById   = useAutoStore((s) => s.getModelById);
-  const getPartById    = useAutoStore((s) => s.getPartById);
-  const getSpecsForPart = useAutoStore((s) => s.getSpecsForPart);
-  const getBrandColor  = useAutoStore((s) => s.getBrandColor);
-  const setSelectedPart = useAutoStore((s) => s.setSelectedPart);
+  const {
+    getBrandById,
+    getModelById,
+    getPartById,
+    getSpecsForPart,
+    getBrandColor,
+    getImage,
+  } = useAutoStore();
 
   const brand = getBrandById(brandId);
   const model = getModelById(modelId);
-  const part  = getPartById(partId);
+  const part = getPartById(partId);
   const specifications = getSpecsForPart(partId);
-  const colorConfig = getBrandColor(brandId);
+  const brandColor = getBrandColor(brandId);
 
   useEffect(() => {
-    if (!brand) { navigate('/brands'); return; }
-    if (!model) { navigate(`/brands/${brandId}/models`); return; }
-    if (!part)  { navigate(`/brands/${brandId}/models/${modelId}/parts`); return; }
-    setSelectedPart(partId);
-  }, [brandId, modelId, partId]);
+    if (!brand) {
+      navigate('/brands', { replace: true });
+    } else if (!model) {
+      navigate(`/brands/${brandId}/models`, { replace: true });
+    } else if (!part) {
+      navigate(`/brands/${brandId}/models/${modelId}/parts`, { replace: true });
+    }
+  }, [brand, model, part, brandId, modelId, navigate]);
 
   const handleExport = () => {
     if (part && specifications) {
@@ -45,93 +49,175 @@ export default function SpecsPage() {
     window.print();
   };
 
+  const partImageSrc = part ? getImage(part.part_image_filename) : null;
+
   if (!brand || !model || !part) return null;
 
   return (
-    <div className="min-h-screen bg-surface-bg bg-grid-texture">
+    <div className="min-h-screen bg-surface-bg">
       <Navbar />
-
-      {/* Header */}
-      <div className="bg-surface-card border-b border-surface-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <Breadcrumb crumbs={[
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb
+          crumbs={[
             { label: brand.brand_name, href: `/brands/${brandId}/models` },
             { label: model.model_name, href: `/brands/${brandId}/models/${modelId}/parts` },
-            { label: part.part_name },
-          ]} />
+            { label: part.part_name, href: null },
+          ]}
+        />
 
-          <div className="mt-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div>
-              <h1 className="font-display text-3xl sm:text-4xl tracking-widest text-slate-100 uppercase">
-                {part.part_name}
-              </h1>
-              <div className="flex flex-wrap items-center gap-3 mt-2 text-sm font-body text-slate-400">
-                <span>{part.oem_number}</span>
-                <span className="text-slate-600">|</span>
-                <span>{part.manufacturer}</span>
-                <span className="text-slate-600">|</span>
-                <span>{part.part_category}</span>
-                <span className="text-slate-600">|</span>
-                <span>₹{Number(part.price_inr).toLocaleString('en-IN')}</span>
-                <StockBadge status={part.stock_status} size="sm" />
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => navigate(`/brands/${brandId}/models/${modelId}/parts`)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-body text-slate-400 border border-surface-border hover:text-slate-200 hover:border-slate-600 transition-all"
-              >
-                <ArrowLeft size={15} />
-                <span className="hidden sm:inline">Back</span>
-              </button>
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-body text-blue-400 border border-blue-500/40 hover:bg-blue-500/10 transition-all"
-              >
-                <Download size={15} />
-                <span className="hidden sm:inline">Export</span>
-              </button>
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-body text-slate-400 border border-surface-border hover:text-slate-200 hover:border-slate-600 transition-all"
-              >
-                <Printer size={15} />
-                <span className="hidden sm:inline">Print</span>
-              </button>
-            </div>
+        {/* Actions Row */}
+        <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+          <button
+            onClick={() =>
+              navigate(`/brands/${brandId}/models/${modelId}/parts`)
+            }
+            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <ArrowLeft size={15} />
+            Back to Parts
+          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-300 bg-surface-card border border-surface-border rounded-lg hover:bg-surface-hover transition-all"
+            >
+              <Download size={15} />
+              Export to Excel
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-300 bg-surface-card border border-surface-border rounded-lg hover:bg-surface-hover transition-all"
+            >
+              <Printer size={15} />
+              Print Page
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <main ref={printRef} className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        {/* Chart */}
-        {specifications.length > 0 && (
-          <div className="glass-card rounded-2xl p-6">
-            <h2 className="font-display text-xl tracking-wide text-slate-100 mb-4">Specifications Overview</h2>
-            <SpecChart specifications={specifications} brandColor={colorConfig.primary} />
+        {/* Part Hero Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card rounded-2xl p-6"
+        >
+          <div className="flex flex-col sm:flex-row gap-5">
+            {/* Part Image */}
+            <div className="flex-shrink-0 w-full sm:w-40 h-32 rounded-xl overflow-hidden bg-surface border border-surface-border">
+              {partImageSrc ? (
+                <img
+                  src={partImageSrc}
+                  alt={part.part_name}
+                  className="w-full h-full object-contain p-2"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Package size={36} className="text-slate-600" />
+                </div>
+              )}
+            </div>
+
+            {/* Part Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-100">{part.part_name}</h2>
+                  <p className="text-sm text-slate-400">
+                    {model.model_name} · {brand.brand_name}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StockBadge status={part.stock_status} size="md" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-4">
+                {part.part_id && (
+                  <div>
+                    <p className="text-xs text-slate-500">Part ID</p>
+                    <p className="text-sm text-slate-300">{part.part_id}</p>
+                  </div>
+                )}
+                {part.part_category && (
+                  <div>
+                    <p className="text-xs text-slate-500">Category</p>
+                    <p className="text-sm text-slate-300">{part.part_category}</p>
+                  </div>
+                )}
+                {part.oem_number && (
+                  <div>
+                    <p className="text-xs text-slate-500">OEM Number</p>
+                    <p className="text-sm text-slate-300">{part.oem_number}</p>
+                  </div>
+                )}
+                {part.manufacturer && (
+                  <div>
+                    <p className="text-xs text-slate-500">Manufacturer</p>
+                    <p className="text-sm text-slate-300">{part.manufacturer}</p>
+                  </div>
+                )}
+                {part.weight_kg != null && (
+                  <div>
+                    <p className="text-xs text-slate-500">Weight</p>
+                    <p className="text-sm text-slate-300">{part.weight_kg} kg</p>
+                  </div>
+                )}
+                {part.warranty_months != null && (
+                  <div>
+                    <p className="text-xs text-slate-500">Warranty</p>
+                    <p className="text-sm text-slate-300">{part.warranty_months} months</p>
+                  </div>
+                )}
+                {part.price_inr != null && (
+                  <div>
+                    <p className="text-xs text-slate-500">Price</p>
+                    <p className="text-sm font-semibold" style={{ color: brandColor.primary }}>
+                      ₹{part.price_inr.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
+        </motion.div>
+
+        {/* Spec Chart */}
+        {specifications.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <h3 className="text-lg font-semibold text-slate-200 mb-4">
+              Specifications Chart
+            </h3>
+            <SpecChart specifications={specifications} brandColor={brandColor.primary} />
+          </motion.div>
         )}
 
-        {/* Table */}
+        {/* Spec Table */}
         {specifications.length > 0 ? (
-          <div>
-            <h2 className="font-display text-xl tracking-wide text-slate-100 mb-4">Detailed Specs</h2>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
+            <h3 className="text-lg font-semibold text-slate-200 mb-4">
+              Technical Specifications
+            </h3>
             <SpecTable specifications={specifications} />
-          </div>
+          </motion.div>
         ) : (
           <EmptyState
-            title="No specifications available"
-            description={`No spec data found for ${part.part_name}.`}
+            icon={Package}
+            title="No Specifications"
+            description="This part has no technical specifications defined."
           />
         )}
 
-        {/* Print-only footer */}
-        <div className="hidden print:block text-xs text-slate-500 pt-8 border-t border-surface-border mt-8">
-          <p>AutoVault Dashboard — {brand.brand_name} / {model.model_name} / {part.part_name}</p>
-          <p>Generated on {new Date().toLocaleDateString('en-IN')}</p>
+        {/* Print Footer */}
+        <div className="hidden print:block text-center text-xs text-slate-400 mt-8">
+          AutoVault Dashboard — Generated {new Date().toLocaleDateString()}
         </div>
       </main>
     </div>

@@ -1,71 +1,115 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
-  Car, Settings, Database, Upload, Image, Download,
-  AlertTriangle, RefreshCw, Sun, Moon, BarChart3,
-  Building2, Package, Wrench, ClipboardList,
+  Download,
+  AlertTriangle,
+  Sun,
+  Moon,
+  Trash2,
+  BarChart3,
+  Package,
+  Wrench,
+  FileSpreadsheet,
+  CheckCircle,
 } from 'lucide-react';
+import useAutoStore from '../store/useAutoStore';
+import useExcelUpload from '../hooks/useExcelUpload';
+import useImageUpload from '../hooks/useImageUpload';
 import Navbar from '../components/Navbar';
 import FileUploader from '../components/FileUploader';
 import ImageUploader from '../components/ImageUploader';
 import StatCard from '../components/StatCard';
 import ConfirmModal from '../components/ConfirmModal';
 import StockBadge from '../components/StockBadge';
-import useAutoStore from '../store/useAutoStore';
-import { useExcelUpload } from '../hooks/useExcelUpload';
-import { useImageUpload } from '../hooks/useImageUpload';
 import { exportFullDataToExcel } from '../utils/exportHelper';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
   const {
-    brands, models, parts, specifications, images,
-    isDataLoaded, theme,
-    clearAll, setTheme, getLowStockParts, getOutOfStockParts,
+    brands,
+    models,
+    parts,
+    specifications,
+    isDataLoaded,
+    theme,
+    setTheme,
+    clearAll,
+    lowStockParts,
+    outOfStockParts,
   } = useAutoStore();
 
   const excel = useExcelUpload();
   const image = useImageUpload();
-
   const [showResetModal, setShowResetModal] = useState(false);
 
-  const lowStockParts = useMemo(() => getLowStockParts(), [parts]);
-  const outOfStockParts = useMemo(() => getOutOfStockParts(), [parts]);
+  const lowStock = useAutoStore.getState().getLowStockParts?.() || [];
+  const outOfStock = useAutoStore.getState().getOutOfStockParts?.() || [];
 
   const handleConfirmLoad = () => {
     excel.confirmLoad();
     image.confirmSave();
-    navigate('/brands');
+    const role = useAutoStore.getState().auth?.role;
+    if (role === 'admin') {
+      // stay on /admin
+    } else {
+      navigate('/brands');
+    }
   };
 
   const handleExportAll = () => {
     exportFullDataToExcel({ brands, models, parts, specifications });
   };
 
-  return (
-    <div className="min-h-screen bg-surface-bg bg-grid-texture">
-      <Navbar />
+  const handleResetAll = () => {
+    clearAll();
+    setShowResetModal(false);
+    navigate('/admin');
+  };
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-10">
+  const hasData = excel.parsedData || Object.keys(image.uploadedImages).length > 0;
+
+  return (
+    <div className="min-h-screen bg-surface-bg">
+      <Navbar />
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Header */}
-        <div>
-          <h1 className="font-display text-4xl sm:text-5xl tracking-widest text-slate-100 uppercase">
-            Admin Panel
-          </h1>
-          <div className="h-1 w-20 bg-gradient-to-r from-blue-500 to-violet-500 rounded-full mt-3" />
-          <p className="text-slate-500 font-body text-sm mt-3">
-            Upload your Excel file and images to generate the dashboard.
-          </p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
+        >
+          <div>
+            <h1 className="text-3xl font-display tracking-wider text-slate-100">
+              ADMIN PANEL
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">Upload data and manage the catalog</p>
+          </div>
+          {isDataLoaded && (
+            <button
+              onClick={handleExportAll}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-200 bg-surface-card border border-surface-border rounded-xl hover:bg-surface-hover transition-all"
+            >
+              <Download size={16} />
+              Export All Data
+            </button>
+          )}
+        </motion.div>
 
         {/* Excel Upload */}
-        <section className="glass-card rounded-2xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/15 text-blue-400">
-              <Database size={20} />
-            </div>
-            <h2 className="font-display text-xl tracking-wide text-slate-100">Excel Data</h2>
-          </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="glass-card rounded-2xl p-6"
+        >
+          <h2 className="text-lg font-semibold text-slate-200 mb-1">
+            1. Upload Excel Data
+          </h2>
+          <p className="text-sm text-slate-500 mb-5">
+            Upload a .xlsx file with Brands, Models, Parts, and Specifications sheets.
+          </p>
+
           <FileUploader
             onFile={excel.handleFile}
             isLoading={excel.isLoading}
@@ -73,30 +117,50 @@ export default function AdminPanel() {
             error={excel.error}
           />
 
-          {/* Parsed data preview */}
+          {/* Preview Table */}
           {excel.parsedData && (
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm font-body">
-              <p className="text-emerald-300 font-medium mb-1">File parsed successfully</p>
-              <p className="text-slate-400">
-                {excel.parsedData.brands.length} Brands · {excel.parsedData.models.length} Models · {excel.parsedData.parts.length} Parts · {excel.parsedData.specifications.length} Specifications
-              </p>
-              {excel.parsedData.warnings.length > 0 && (
-                <ul className="mt-2 text-amber-400 text-xs space-y-0.5">
-                  {excel.parsedData.warnings.map((w, i) => <li key={i}>{w}</li>)}
-                </ul>
-              )}
-            </div>
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="mt-5 space-y-4"
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'Brands', count: excel.parsedData.brands.length, icon: BarChart3 },
+                  { label: 'Models', count: excel.parsedData.models.length, icon: Package },
+                  { label: 'Parts', count: excel.parsedData.parts.length, icon: Wrench },
+                  { label: 'Specs', count: excel.parsedData.specifications.length, icon: FileSpreadsheet },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-surface-border"
+                  >
+                    <item.icon size={20} className="text-blue-400" />
+                    <div>
+                      <p className="text-xs text-slate-500">{item.label}</p>
+                      <p className="text-lg font-bold text-slate-200">{item.count}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
           )}
-        </section>
+        </motion.div>
 
         {/* Image Upload */}
-        <section className="glass-card rounded-2xl p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-violet-500/15 text-violet-400">
-              <Image size={20} />
-            </div>
-            <h2 className="font-display text-xl tracking-wide text-slate-100">Brand Images &amp; Logos</h2>
-          </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass-card rounded-2xl p-6"
+        >
+          <h2 className="text-lg font-semibold text-slate-200 mb-1">
+            2. Upload Brand / Model Images
+          </h2>
+          <p className="text-sm text-slate-500 mb-5">
+            Upload images individually or as a ZIP archive. Supported: PNG, JPG, WebP, GIF.
+          </p>
+
           <ImageUploader
             onFiles={image.handleFiles}
             onZip={image.handleZip}
@@ -107,121 +171,203 @@ export default function AdminPanel() {
             warning={image.warning}
             totalSize={image.totalSize}
           />
-        </section>
 
-        {/* Data Overview (only when data is loaded) */}
-        {isDataLoaded && (
-          <section className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400">
-                <BarChart3 size={20} />
-              </div>
-              <h2 className="font-display text-xl tracking-wide text-slate-100">Data Overview</h2>
+          {Object.keys(image.uploadedImages).length > 0 && (
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={image.confirmSave}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-500 hover:shadow-glow-blue transition-all"
+              >
+                <CheckCircle size={16} />
+                Save Images
+              </button>
             </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatCard label="Brands" value={brands.length} icon={<Building2 size={20} />} color="text-blue-400" />
-              <StatCard label="Models" value={models.length} icon={<Car size={20} />} color="text-violet-400" />
-              <StatCard label="Parts"   value={parts.length}   icon={<Package size={20} />} color="text-amber-400" />
-              <StatCard label="Specs"   value={specifications.length} icon={<ClipboardList size={20} />} color="text-emerald-400" />
-            </div>
-
-            {/* Stock warnings */}
-            {(lowStockParts.length > 0 || outOfStockParts.length > 0) && (
-              <div className="glass-card rounded-2xl p-5 space-y-3">
-                <h3 className="font-display text-lg tracking-wide text-slate-100">Stock Alerts</h3>
-                {lowStockParts.length > 0 && (
-                  <div>
-                    <p className="text-amber-400 text-sm font-body font-medium mb-2">Low Stock ({lowStockParts.length})</p>
-                    <div className="flex flex-wrap gap-2">
-                      {lowStockParts.slice(0, 5).map((p) => (
-                        <StockBadge key={p.part_id} status="Low" size="sm" />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {outOfStockParts.length > 0 && (
-                  <div>
-                    <p className="text-red-400 text-sm font-body font-medium mb-2">Out of Stock ({outOfStockParts.length})</p>
-                    <div className="flex flex-wrap gap-2">
-                      {outOfStockParts.slice(0, 5).map((p) => (
-                        <StockBadge key={p.part_id} status="Out of Stock" size="sm" />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Export button */}
-            <button
-              onClick={handleExportAll}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-500/20 text-blue-400 border border-blue-500/40 rounded-xl text-sm font-body font-medium hover:bg-blue-500/30 transition-colors"
-            >
-              <Download size={16} />
-              Export All Data to Excel
-            </button>
-          </section>
-        )}
+          )}
+        </motion.div>
 
         {/* Confirm & Load */}
-        {(excel.parsedData || Object.keys(image.uploadedImages).length > 0) && (
-          <div className="flex flex-wrap gap-4 items-center">
-            <button
-              onClick={handleConfirmLoad}
-              className="flex items-center gap-2 px-6 py-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-xl text-sm font-body font-medium hover:bg-emerald-500/30 transition-all"
+        {hasData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="glass-card rounded-2xl p-6 border-blue-500/20"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-200">Ready to Load</h2>
+                <p className="text-sm text-slate-500">
+                  {excel.parsedData ? 'Excel data parsed and ready' : ''}
+                  {excel.parsedData && Object.keys(image.uploadedImages).length > 0 ? ' + ' : ''}
+                  {Object.keys(image.uploadedImages).length > 0
+                    ? `${Object.keys(image.uploadedImages).length} image(s) ready`
+                    : ''}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleConfirmLoad}
+                  className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-500 hover:shadow-glow-blue transition-all"
+                >
+                  <CheckCircle size={18} />
+                  {isDataLoaded ? 'Update & Reload' : 'Confirm & Load'}
+                </button>
+                {isDataLoaded && (
+                  <button
+                    onClick={() => navigate('/brands')}
+                    className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-blue-400 bg-blue-500/10 rounded-xl hover:bg-blue-500/20 transition-all"
+                  >
+                    View Dashboard →
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Data Overview (when loaded) */}
+        {isDataLoaded && (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
             >
-              <Upload size={18} />
-              {isDataLoaded ? 'Update & Reload' : 'Confirm & Load'}
-            </button>
-            <button
-              onClick={excel.reset}
-              className="px-4 py-3 text-sm font-body text-slate-400 border border-surface-border rounded-xl hover:text-slate-300 transition-colors"
-            >
-              Clear Upload
-            </button>
-          </div>
+              <h2 className="text-lg font-semibold text-slate-200 mb-4">Data Overview</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  label="Brands"
+                  value={brands.length}
+                  icon={<BarChart3 size={22} />}
+                  color="text-blue-400"
+                />
+                <StatCard
+                  label="Models"
+                  value={models.length}
+                  icon={<Package size={22} />}
+                  color="text-emerald-400"
+                />
+                <StatCard
+                  label="Parts"
+                  value={parts.length}
+                  icon={<Wrench size={22} />}
+                  color="text-amber-400"
+                />
+                <StatCard
+                  label="Specifications"
+                  value={specifications.length}
+                  icon={<FileSpreadsheet size={22} />}
+                  color="text-violet-400"
+                />
+              </div>
+            </motion.div>
+
+            {/* Stock Alerts */}
+            {(lowStock.length > 0 || outOfStock.length > 0) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="glass-card rounded-2xl p-6"
+              >
+                <h2 className="text-lg font-semibold text-slate-200 mb-4">
+                  Stock Alerts
+                </h2>
+                <div className="space-y-3">
+                  {lowStock.map((p) => (
+                    <div
+                      key={p.part_id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-amber-500/5 border border-amber-500/20"
+                    >
+                      <div>
+                        <p className="text-sm text-slate-200">{p.part_name}</p>
+                        <p className="text-xs text-slate-500">OEM: {p.oem_number || '—'}</p>
+                      </div>
+                      <StockBadge status="Low" size="sm" />
+                    </div>
+                  ))}
+                  {outOfStock.map((p) => (
+                    <div
+                      key={p.part_id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-red-500/5 border border-red-500/20"
+                    >
+                      <div>
+                        <p className="text-sm text-slate-200">{p.part_name}</p>
+                        <p className="text-xs text-slate-500">OEM: {p.oem_number || '—'}</p>
+                      </div>
+                      <StockBadge status="Out of Stock" size="sm" />
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </>
         )}
 
         {/* Danger Zone */}
-        <section className="glass-card rounded-2xl p-6 border-red-500/30 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-500/15 text-red-400">
-              <Settings size={20} />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="glass-card rounded-2xl p-6 border-red-500/20"
+        >
+          <h2 className="text-lg font-semibold text-slate-200 mb-4">Settings & Danger Zone</h2>
+          <div className="space-y-4">
+            {/* Theme Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-surface border border-surface-border">
+              <div className="flex items-center gap-3">
+                {theme === 'dark' ? (
+                  <Moon size={18} className="text-blue-400" />
+                ) : (
+                  <Sun size={18} className="text-amber-400" />
+                )}
+                <div>
+                  <p className="text-sm text-slate-200">Theme</p>
+                  <p className="text-xs text-slate-500">
+                    Current: <span className="capitalize">{theme}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="px-4 py-1.5 text-sm font-medium rounded-lg bg-surface-card border border-surface-border text-slate-300 hover:bg-surface-hover transition-all"
+              >
+                Toggle
+              </button>
             </div>
-            <h2 className="font-display text-xl tracking-wide text-slate-100">Danger Zone</h2>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-body text-slate-400 border border-surface-border rounded-xl hover:text-slate-200 hover:border-slate-600 transition-all"
-            >
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-              Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
-            </button>
-
-            <button
-              onClick={() => setShowResetModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-body text-red-400 border border-red-500/40 rounded-xl hover:bg-red-500/10 transition-all"
-            >
-              <RefreshCw size={16} />
-              Reset All Data
-            </button>
+            {/* Reset All Data */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-red-500/5 border border-red-500/20">
+              <div className="flex items-center gap-3">
+                <AlertTriangle size={18} className="text-red-400" />
+                <div>
+                  <p className="text-sm text-slate-200">Reset All Data</p>
+                  <p className="text-xs text-slate-500">
+                    Permanently delete all brands, models, parts, and images
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowResetModal(true)}
+                className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg hover:bg-red-500/20 transition-all"
+              >
+                <Trash2 size={15} />
+                Reset
+              </button>
+            </div>
           </div>
-        </section>
+        </motion.div>
+
+        <ConfirmModal
+          isOpen={showResetModal}
+          onClose={() => setShowResetModal(false)}
+          onConfirm={handleResetAll}
+          title="Reset All Data?"
+          description="This will permanently delete all brands, models, parts, specifications, and uploaded images. This action cannot be undone."
+          confirmLabel="Yes, Reset Everything"
+          confirmVariant="danger"
+        />
       </main>
-
-      <ConfirmModal
-        isOpen={showResetModal}
-        onClose={() => setShowResetModal(false)}
-        onConfirm={clearAll}
-        title="Reset All Data"
-        description="This will permanently delete all uploaded data, including brands, models, parts, specifications, and images. This action cannot be undone."
-        confirmLabel="Reset Everything"
-        confirmVariant="danger"
-      />
     </div>
   );
 }

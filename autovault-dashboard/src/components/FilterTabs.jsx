@@ -1,35 +1,33 @@
 import React from 'react';
 
-export default function FilterTabs({ tabs, active, onSelect, colorMap = {}, className = '' }) {
+export default function FilterTabs({ tabs, active, onSelect, colorMap, className = '' }) {
+  if (!tabs || tabs.length === 0) return null;
+
   return (
     <div className={`flex flex-wrap gap-2 ${className}`}>
       {tabs.map((tab) => {
-        const isActive = active === tab.value;
-        const colors = colorMap[tab.value];
-
+        const isActive = active === tab.key;
+        const activeColor = colorMap && colorMap[tab.key];
         return (
           <button
-            key={tab.value}
-            onClick={() => onSelect(tab.value)}
-            className={`
-              inline-flex items-center gap-1.5 px-4 py-2 rounded-xl
-              text-sm font-body font-medium
-              border transition-all duration-200
-              ${isActive
-                ? colors
-                  ? `${colors.bg} ${colors.text} ${colors.border}`
-                  : 'bg-blue-500/20 text-blue-400 border-blue-500/50'
-                : 'bg-surface-card text-slate-400 border-surface-border hover:border-slate-600 hover:text-slate-300'
-              }
-            `}
+            key={tab.key}
+            onClick={() => onSelect(tab.key)}
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+              isActive
+                ? activeColor
+                  ? `${activeColor.bg} ${activeColor.text} ${activeColor.border} border`
+                  : 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                : 'bg-surface-card text-slate-400 border border-surface-border hover:bg-surface-hover hover:text-slate-300'
+            }`}
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className={`
-                text-xs px-1.5 py-0.5 rounded-full
-                ${isActive ? 'bg-white/20' : 'bg-surface-border text-slate-500'}
-              `}>
-                {tab.count}
+              <span
+                className={`ml-1.5 text-xs ${
+                  isActive ? 'opacity-80' : 'text-slate-500'
+                }`}
+              >
+                ({tab.count})
               </span>
             )}
           </button>

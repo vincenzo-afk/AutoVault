@@ -1,26 +1,48 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { assignBrandColors } from '../utils/colorAssigner';
+import { assignBrandColors, getBrandColor } from '../utils/colorAssigner';
 
 const useAutoStore = create(
   persist(
     (set, get) => ({
-      // ─── State ─────────────────────────────────────────────────────────
+      // Data state
       brands: [],
       models: [],
       parts: [],
       specifications: [],
       images: {},
-      selectedBrand: null,
-      selectedModel: null,
-      selectedPart: null,
       isDataLoaded: false,
       theme: 'dark',
       brandColors: {},
+      auth: {
+        isLoggedIn: false,
+        role: null, // "admin" | "viewer" | null
+        username: "",
+      },
 
-      // ─── Actions ────────────────────────────────────────────────────────
+      // Transient selection state (not persisted)
+      selectedBrand: null,
+      selectedModel: null,
+      selectedPart: null,
 
-      setAllData: (brands, models, parts, specifications) => {
+      // ---- Actions ----
+
+      login: (username, password) => {
+        if (username === "admin" && password === "password") {
+          set({ auth: { isLoggedIn: true, role: "admin", username } });
+          return "admin";
+        } else if (username.trim() && password.trim()) {
+          set({ auth: { isLoggedIn: true, role: "viewer", username } });
+          return "viewer";
+        }
+        return null; // failed
+      },
+
+      logout: () => {
+        set({ auth: { isLoggedIn: false, role: null, username: "" } });
+      },
+
+      setAllData: ({ brands, models, parts, specifications }) => {
         const brandColors = assignBrandColors(brands);
         set({
           brands,
@@ -32,113 +54,77 @@ const useAutoStore = create(
         });
       },
 
-      setImages: (imagesMap) => {
-        set({ images: imagesMap });
-      },
+      setImages: (images) => set({ images }),
 
-      mergeImages: (newImagesMap) => {
+      mergeImages: (newImages) =>
         set((state) => ({
-          images: { ...state.images, ...newImagesMap },
-        }));
-      },
+          images: { ...state.images, ...newImages },
+        })),
 
-      setSelectedBrand: (brand_id) => {
-        set({ selectedBrand: brand_id });
-      },
-
-      setSelectedModel: (model_id) => {
-        set({ selectedModel: model_id });
-      },
-
-      setSelectedPart: (part_id) => {
-        set({ selectedPart: part_id });
-      },
-
-      clearAll: () => {
+      clearAll: () =>
         set({
           brands: [],
           models: [],
           parts: [],
           specifications: [],
           images: {},
+          isDataLoaded: false,
+          brandColors: {},
           selectedBrand: null,
           selectedModel: null,
           selectedPart: null,
-          isDataLoaded: false,
-          brandColors: {},
-        });
-      },
+        }),
 
       setTheme: (theme) => {
+        document.documentElement.classList.remove('dark', 'light');
+        document.documentElement.classList.add(theme);
         set({ theme });
-        if (theme === 'dark') {
-          document.documentElement.classList.add('dark');
-          document.documentElement.classList.remove('light');
-        } else {
-          document.documentElement.classList.remove('dark');
-          document.documentElement.classList.add('light');
-        }
       },
 
-      assignBrandColors: () => {
-        const { brands } = get();
+      assignBrandColors: (brands) => {
         const brandColors = assignBrandColors(brands);
         set({ brandColors });
       },
 
-      // ─── Derived selectors ─────────────────────────────────────────────
+      setSelectedBrand: (id) => set({ selectedBrand: id }),
+      setSelectedModel: (id) => set({ selectedModel: id }),
+      setSelectedPart: (id) => set({ selectedPart: id }),
 
-      getModelsForBrand: (brand_id) => {
-        return get().models.filter((m) => m.brand_id === brand_id);
-      },
+      // ---- Derived Selectors ----
 
-      getPartsForModel: (model_id) => {
-        return get().parts.filter((p) => p.model_id === model_id);
-      },
+      getBrandById: (id) => get().brands.find((b) => b.brand_id === id) || null,
 
-      getSpecsForPart: (part_id) => {
-        return get().specifications.filter((s) => s.part_id === part_id);
-      },
+      getModelById: (id) => get().models.find((m) => m.model_id === id) || null,
 
-      getBrandById: (brand_id) => {
-        return get().brands.find((b) => b.brand_id === brand_id) || null;
-      },
-
-      getModelById: (model_id) => {
-        return get().models.find((m) => m.model_id === model_id) || null;
-      },
-
-      getPartById: (part_id) => {
-        return get().parts.find((p) => p.part_id === part_id) || null;
-      },
+      getPartById: (id) => get().parts.find((p) => p.part_id === id) || null,
 
       getImage: (filename) => {
         if (!filename) return null;
-        // Exact match first
-        if (get().images[filename]) return get().images[filename];
+        const { images } = get();
+        if (images[filename]) return images[filename];
         // Case-insensitive fallback
-        const match = Object.keys(get().images).find(
+        const key = Object.keys(images).find(
           (k) => k.toLowerCase() === filename.toLowerCase()
         );
-        return match ? get().images[match] : null;
+        return key ? images[key] : null;
       },
 
-      getBrandColor: (brand_id) => {
-        const colors = get().brandColors;
-        return colors[brand_id] || {
-          primary: '#3B82F6',
-          secondary: '#1D4ED8',
-          gradient: 'from-blue-500 to-blue-800',
-        };
-      },
+      getBrandColor: (brand_id) => getBrandColor(get().brandColors, brand_id),
 
-      getLowStockParts: () => {
-        return get().parts.filter((p) => p.stock_status === 'Low');
-      },
+      getModelsForBrand: (brand_id) =>
+        get().models.filter((m) => m.brand_id === brand_id),
 
-      getOutOfStockParts: () => {
-        return get().parts.filter((p) => p.stock_status === 'Out of Stock');
-      },
+      getPartsForModel: (model_id) =>
+        get().parts.filter((p) => p.model_id === model_id),
+
+      getSpecsForPart: (part_id) =>
+        get().specifications.filter((s) => s.part_id === part_id),
+
+      getLowStockParts: () =>
+        get().parts.filter((p) => p.stock_status === 'Low'),
+
+      getOutOfStockParts: () =>
+        get().parts.filter((p) => p.stock_status === 'Out of Stock'),
     }),
     {
       name: 'autovault-storage',
@@ -151,10 +137,15 @@ const useAutoStore = create(
         isDataLoaded: state.isDataLoaded,
         theme: state.theme,
         brandColors: state.brandColors,
+        auth: state.auth,
       }),
       onRehydrateStorage: () => (state, error) => {
         if (error) {
-          console.error('AutoVault: Failed to rehydrate from localStorage:', error);
+          console.error('Failed to rehydrate store:', error);
+        }
+        if (state && state.theme) {
+          document.documentElement.classList.remove('dark', 'light');
+          document.documentElement.classList.add(state.theme);
         }
       },
     }

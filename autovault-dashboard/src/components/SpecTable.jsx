@@ -2,65 +2,96 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const CONDITION_ROW_STYLES = {
-  Normal:   'bg-emerald-500/8 border-l-2 border-l-emerald-500',
-  Warning:  'bg-amber-500/8 border-l-2 border-l-amber-500',
-  Critical: 'bg-red-500/8 border-l-2 border-l-red-500',
+  Normal: 'border-l-emerald-500/40 bg-emerald-500/[0.02]',
+  Warning: 'border-l-amber-500/40 bg-amber-500/[0.03]',
+  Critical: 'border-l-red-500/40 bg-red-500/[0.03]',
 };
+
 const CONDITION_BADGE_STYLES = {
-  Normal:   'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  Warning:  'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  Critical: 'bg-red-500/15 text-red-400 border-red-500/30',
+  Normal: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+  Warning: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+  Critical: 'bg-red-500/10 text-red-400 border-red-500/30',
 };
 
 export default function SpecTable({ specifications }) {
   if (!specifications || specifications.length === 0) {
     return (
-      <p className="text-slate-500 text-sm font-body py-8 text-center">No specifications available.</p>
+      <div className="glass-card rounded-2xl p-8 text-center">
+        <p className="text-slate-500">No specifications available.</p>
+      </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-surface-border">
-      <table className="w-full text-sm font-body">
-        <thead>
-          <tr className="border-b border-surface-border bg-surface-hover">
-            <th className="text-left px-5 py-3 text-slate-400 font-semibold">Spec Name</th>
-            <th className="text-center px-5 py-3 text-slate-400 font-semibold">Value</th>
-            <th className="text-center px-5 py-3 text-slate-400 font-semibold">Standard</th>
-            <th className="text-center px-5 py-3 text-slate-400 font-semibold">Tolerance</th>
-            <th className="text-center px-5 py-3 text-slate-400 font-semibold">Status</th>
-            <th className="text-left px-5 py-3 text-slate-400 font-semibold">Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          {specifications.map((spec, i) => (
-            <motion.tr
-              key={spec.spec_id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className={`border-b border-surface-border last:border-b-0 ${CONDITION_ROW_STYLES[spec.condition]}`}
-            >
-              <td className="px-5 py-3.5 text-slate-200 font-medium">{spec.spec_name}</td>
-              <td className="px-5 py-3.5 text-center text-slate-100 font-mono font-semibold">
-                {spec.spec_value} <span className="text-slate-500 font-sans font-normal text-xs">{spec.unit}</span>
-              </td>
-              <td className="px-5 py-3.5 text-center text-slate-400 font-mono">
-                {spec.standard_value} <span className="text-slate-600 text-xs">{spec.unit}</span>
-              </td>
-              <td className="px-5 py-3.5 text-center text-slate-500 font-mono text-xs">
-                +{spec.tolerance_plus} / -{spec.tolerance_minus}
-              </td>
-              <td className="px-5 py-3.5 text-center">
-                <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${CONDITION_BADGE_STYLES[spec.condition]}`}>
-                  {spec.condition}
-                </span>
-              </td>
-              <td className="px-5 py-3.5 text-slate-500 text-xs">{spec.notes || '—'}</td>
-            </motion.tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="glass-card rounded-2xl overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-surface-border">
+              <th className="text-left py-3.5 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">
+                Spec Name
+              </th>
+              <th className="text-left py-3.5 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">
+                Value
+              </th>
+              <th className="text-left py-3.5 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">
+                Standard
+              </th>
+              <th className="text-left py-3.5 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">
+                Tolerance
+              </th>
+              <th className="text-left py-3.5 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">
+                Status
+              </th>
+              <th className="text-left py-3.5 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">
+                Notes
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {specifications.map((spec, i) => (
+              <motion.tr
+                key={spec.spec_id || i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.25, delay: i * 0.03 }}
+                className={`border-b border-surface-border border-l-2 ${
+                  CONDITION_ROW_STYLES[spec.condition] || CONDITION_ROW_STYLES.Normal
+                } hover:bg-surface-hover transition-colors`}
+              >
+                <td className="py-3 px-4 text-slate-200 font-medium">{spec.spec_name}</td>
+                <td className="py-3 px-4 text-slate-300">
+                  {spec.spec_value != null ? spec.spec_value : '—'}
+                  {spec.unit && <span className="text-slate-500 ml-0.5">{spec.unit}</span>}
+                </td>
+                <td className="py-3 px-4 text-slate-400">
+                  {spec.standard_value != null ? spec.standard_value : '—'}
+                  {spec.standard_value != null && spec.unit && (
+                    <span className="text-slate-600 ml-0.5">{spec.unit}</span>
+                  )}
+                </td>
+                <td className="py-3 px-4 text-slate-400 text-xs">
+                  {spec.tolerance_minus || spec.tolerance_plus
+                    ? `${spec.tolerance_minus ?? 0} / +${spec.tolerance_plus ?? 0}`
+                    : '—'}
+                </td>
+                <td className="py-3 px-4">
+                  <span
+                    className={`inline-block text-xs font-medium px-2.5 py-0.5 rounded-full border ${
+                      CONDITION_BADGE_STYLES[spec.condition] || CONDITION_BADGE_STYLES.Normal
+                    }`}
+                  >
+                    {spec.condition || 'Normal'}
+                  </span>
+                </td>
+                <td className="py-3 px-4 text-slate-500 text-xs max-w-[150px] truncate">
+                  {spec.notes || '—'}
+                </td>
+              </motion.tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
