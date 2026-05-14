@@ -19,9 +19,7 @@ function AdminRoute({ children }) {
 // Any logged-in user can access
 function ViewerRoute({ children }) {
   const auth = useAutoStore(s => s.auth);
-  const isDataLoaded = useAutoStore(s => s.isDataLoaded);
   if (!auth.isLoggedIn) return <Navigate to="/login" replace />;
-  if (!isDataLoaded) return <Navigate to="/admin" replace />; // Wait, the plan says Navigate to /login but /admin might be better if no data. Actually plan says: Navigate to /login. I will follow plan. Wait! Wait, no, viewer can't go to admin, so maybe /login is fine, or maybe show empty state. Actually plan explicitly says: if (!isDataLoaded) return <Navigate to="/login" replace />; I will use what plan gave.
   return children;
 }
 
@@ -41,9 +39,7 @@ export default function App() {
         
         <Route 
           path="/login" 
-          element={
-            <LoginPageWrapper />
-          } 
+          element={<LoginPage />} 
         />
         
         <Route 
@@ -95,14 +91,4 @@ export default function App() {
       </Routes>
     </BrowserRouter>
   );
-}
-
-// Wrapper for login to redirect if already logged in
-function LoginPageWrapper() {
-  const auth = useAutoStore(s => s.auth);
-  if (auth.isLoggedIn) {
-    if (auth.role === "admin") return <Navigate to="/admin" replace />;
-    return <Navigate to="/brands" replace />;
-  }
-  return <LoginPage />;
 }
