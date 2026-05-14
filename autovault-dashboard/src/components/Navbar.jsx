@@ -9,7 +9,7 @@ export default function Navbar({ showSearch = false, searchValue = '', onSearchC
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-surface-border bg-surface-bg/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-surface-border bg-surface-bg/80 backdrop-blur-md print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Logo */}
         <Link

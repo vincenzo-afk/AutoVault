@@ -36,7 +36,7 @@ export default function BrandsPage() {
           <h1 className="font-display text-5xl sm:text-7xl tracking-widest text-slate-100 uppercase">
             Select a Brand
           </h1>
-          <div className="h-1 w-24 bg-gradient-to-r from-blue-500 to-violet-500 rounded-full mt-3" />
+          <div className="h-1 bg-gradient-to-r from-blue-500 to-violet-500 rounded-full mt-2 animate-underline-grow" />
           <p className="text-slate-500 font-body text-sm mt-3">
             {brands.length} brand{brands.length !== 1 ? 's' : ''} loaded
           </p>

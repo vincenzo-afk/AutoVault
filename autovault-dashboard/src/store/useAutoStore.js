@@ -114,7 +114,13 @@ const useAutoStore = create(
 
       getImage: (filename) => {
         if (!filename) return null;
-        return get().images[filename] || null;
+        // Exact match first
+        if (get().images[filename]) return get().images[filename];
+        // Case-insensitive fallback
+        const match = Object.keys(get().images).find(
+          (k) => k.toLowerCase() === filename.toLowerCase()
+        );
+        return match ? get().images[match] : null;
       },
 
       getBrandColor: (brand_id) => {
